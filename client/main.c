@@ -3,7 +3,7 @@
  * ledcon - Server and client for controlling LEDs 
  *          on an orange pi microcomputer.
  *  
- * Copyright (C) 2025 Egorov Konstantin
+ * Copyright (C) 2026 Egorov Konstantin
  *
  * ledcon is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
