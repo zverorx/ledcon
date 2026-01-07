@@ -21,7 +21,7 @@
 
 /**
  * @file
- * @brief The server.
+ * @brief Main Server operations.
  */
 
 #include <sys/socket.h>
@@ -35,60 +35,19 @@
 #include <unistd.h>
 
 #include "../common/ledcp.h"
+#include "server_core.h"
 
 static volatile int run = 1;
-static void signal_handle(int signum) { run = 0; }
 
-int led_switch(struct datagram *dg)
+int start_server(int port)
 {
-    char *path_to_dev = NULL;
-    char buff[1];
-    int fd = -1, res_write;
-
-    if (!dg) { goto handle_error; }
-
-    switch (dg->color) {
-        case green:
-            path_to_dev = "/sys/class/leds/green:status/brightness";
-            break;
-        case red:
-            path_to_dev = "/sys/class/leds/red:power/brightness";
-            break;
-        default: goto handle_error;
-    }
-
-    fd = open(path_to_dev, O_WRONLY);
-    if (fd == -1) { goto handle_error; }
-
-    switch (dg->mode) {
-        case on: buff[0] = '1'; break;
-        case off: buff[0] = '0'; break;
-        default: goto handle_error;
-    }
-
-    res_write = write(fd, buff, sizeof(buff));
-    if (res_write == -1) { goto handle_error; }
-
-    close(fd);
-    return 0;
-
-    handle_error:
-        close(fd);
-        return -1;
-}
-
-int main(int argc, char **argv)
-{
-    int sockfd = -1, port;
+    int sockfd = -1;
     int res_bind, res_recv, res_switch;
     struct sockaddr_in addr_in, sender_addr_in;
     struct sigaction sa;
     struct datagram *buff_from = NULL;
     struct response_datagram *buff_to = NULL;
     socklen_t addrlen;
-
-    if (argc != 2) { goto handle_error; }
-    port = atoi(argv[1]);
 
     memset(&sa, 0, sizeof(struct sigaction));
     sa.sa_handler = &signal_handle;
@@ -142,4 +101,45 @@ int main(int argc, char **argv)
         free(buff_from);
         free(buff_to);
         return EXIT_FAILURE;
+}
+
+static void signal_handle(int signum) { run = 0; }
+
+static int led_switch(struct datagram *dg)
+{
+    /* TODO: getenv() for GREEN_DEV/RED_DEV */
+    char *path_to_dev = NULL;
+    char buff[1];
+    int fd = -1, res_write;
+
+    if (!dg) { goto handle_error; }
+
+    switch (dg->color) {
+        case green:
+            path_to_dev = "/sys/class/leds/green:status/brightness";
+            break;
+        case red:
+            path_to_dev = "/sys/class/leds/red:power/brightness";
+            break;
+        default: goto handle_error;
+    }
+
+    fd = open(path_to_dev, O_WRONLY);
+    if (fd == -1) { goto handle_error; }
+
+    switch (dg->mode) {
+        case on: buff[0] = '1'; break;
+        case off: buff[0] = '0'; break;
+        default: goto handle_error;
+    }
+
+    res_write = write(fd, buff, sizeof(buff));
+    if (res_write == -1) { goto handle_error; }
+
+    close(fd);
+    return 0;
+
+    handle_error:
+        close(fd);
+        return -1;
 }
