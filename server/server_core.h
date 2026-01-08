@@ -24,6 +24,9 @@
  * @brief The main interface of the server.
  */
 
+#ifndef SERVER_CORE_H_SENTRY
+#define SERVER_CORE_H_SENTRY
+
 #include "../common/ledcp.h"
 
 /**
@@ -48,3 +51,5 @@ static void signal_handle(int signum);
  * @return 0 on success, -1 otherwise.
  */
 static int led_switch(struct datagram *dg);
+
+#endif /* SERVER_CORE_H_SENTRY */
