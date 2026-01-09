@@ -21,29 +21,33 @@
 
 /**
  * @file 
+ * @brief The main interface of the client.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
+#ifndef CLIENT_CORE_H_SENTRY
+#define CLIENT_CORE_H_SENTRY
+
+#include <netinet/in.h>
 
 #include "../common/ledcp.h"
-#include "client_core.h"
 
-int main(int argc, char **argv)
-{
-    int res_proc_arg, ret;
-    struct sockaddr_in *dest_addr_in = NULL;
-    struct datagram *send_buff = NULL;
+/**
+ * @brief Executes LED control request to server.
+ * @param addr_in Server address structure.
+ * @param buff LED control datagram.
+ * @return EXIT_SUCCESS or EXIT_FAILURE.
+ */
+int start_client(struct sockaddr_in *addr_in, struct datagram *buff);
 
-    res_proc_arg = process_args(argc, argv, &dest_addr_in, &send_buff);
-    if (res_proc_arg == -1) { 
-        fputs("Usage: ledcon-client <ip:port> <green|red> <on|off>\n"
-              "ip:port - server socket address\n"
-              "green|red - microcomputer LED\n"
-              "on|off - LED mode\n", stderr);
-        return EXIT_FAILURE; 
-    }
+/**
+ * @brief Parses command line arguments.
+ * @param argc Argument count.
+ * @param argv Argument vector.
+ * @param[out] addr_in Parsed server address.
+ * @param[out] dg Parsed LED control datagram.
+ * @return 0 on success, -1 on error.
+ */
+int process_args(int argc, char **argv, 
+                 struct sockaddr_in **addr_in, struct datagram **dg);
 
-    ret = start_client(dest_addr_in, send_buff);
-    return ret;
-}
+#endif /* CLIENT_CORE_H_SENTRY */
