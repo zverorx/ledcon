@@ -37,16 +37,35 @@
 #include "../common/ledcp.h"
 #include "server_core.h"
 
+/**
+ * @brief SIGTERM and SIGINT signal handler for exiting 
+ *        an infinite loop while waiting for a datagram.
+ * @param signum Signal number (SIGTERM or SIGINT).
+ */
+static void signal_handle(int signum);
+
+/**
+ * @brief Turns on or off the desired LED.
+ * @param dg Datagram from the client.
+ * @return 0 on success, -1 otherwise.
+ */
+static int led_switch(struct datagram *dg);
+
+/**
+ * @brief Server running flag (1=running, 0=stop on SIGTERM/SIGINT).
+ * 
+ * @note Used in while() condition of the main UDP socket listening loop.
+ */
 static volatile int run = 1;
 
 int start_server(int port)
 {
     int sockfd = -1;
     int res_bind, res_recv, res_switch;
-    struct sockaddr_in addr_in, sender_addr_in;
+    struct sockaddr_in own_addr_in, sender_addr_in;
     struct sigaction sa;
-    struct datagram *buff_from = NULL;
-    struct response_datagram *buff_to = NULL;
+    struct datagram *recv_buff = NULL;
+    struct response_datagram *send_buff = NULL;
     socklen_t addrlen;
 
     memset(&sa, 0, sizeof(struct sigaction));
@@ -58,48 +77,49 @@ int start_server(int port)
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd == -1) { goto handle_error; }
 
-    memset(&addr_in, 0, sizeof(struct sockaddr_in));
-    addr_in.sin_family = AF_INET;
-    addr_in.sin_port = htons(port);
-    addr_in.sin_addr.s_addr = INADDR_ANY;
+    memset(&sender_addr_in, 0, sizeof(struct response_datagram));
+    memset(&own_addr_in, 0, sizeof(struct sockaddr_in));
+    own_addr_in.sin_family = AF_INET;
+    own_addr_in.sin_addr.s_addr = INADDR_ANY;
+    own_addr_in.sin_port = htons(port);
 
-    res_bind = bind(sockfd, (struct sockaddr *) &addr_in, sizeof(addr_in));
+    res_bind = bind(sockfd, (struct sockaddr *) &own_addr_in, sizeof(own_addr_in));
     if (res_bind == -1) { goto handle_error; }
 
-    buff_from = calloc(1, sizeof(struct datagram));
-    if (!buff_from) { goto handle_error; }
-    buff_to = calloc(1, sizeof(struct response_datagram));
-    if (!buff_to) { goto handle_error; }
+    recv_buff = calloc(1, sizeof(struct datagram));
+    if (!recv_buff) { goto handle_error; }
+    send_buff = calloc(1, sizeof(struct response_datagram));
+    if (!send_buff) { goto handle_error; }
 
     while (run) {
-        buff_to->code = STAT_SUCCESS;
-        memset(buff_from, 0, sizeof(struct datagram));
+        send_buff->code = STAT_SUCCESS;
+        memset(recv_buff, 0, sizeof(struct datagram));
 
         addrlen = sizeof(struct sockaddr_in);
-        res_recv = recvfrom(sockfd, buff_from, sizeof(struct datagram), 0, 
+        res_recv = recvfrom(sockfd, recv_buff, sizeof(struct datagram), 0, 
                             (struct sockaddr *) &sender_addr_in, &addrlen);
         if (res_recv == -1) { continue; } 
         else if (res_recv != sizeof(struct datagram)) {
-            buff_to->code = STAT_FAILURE;
+            send_buff->code = STAT_FAILURE;
         }
         else {
-            res_switch = led_switch(buff_from);
-            if (res_switch == -1) { buff_to->code = STAT_FAILURE; }
+            res_switch = led_switch(recv_buff);
+            if (res_switch == -1) { send_buff->code = STAT_FAILURE; }
         }
 
-        sendto(sockfd, buff_to, sizeof(struct response_datagram), 0,
+        sendto(sockfd, send_buff, sizeof(struct response_datagram), 0,
                (struct sockaddr *) &sender_addr_in, addrlen);
     }
 
     close(sockfd);
-    free(buff_from);
-    free(buff_to);
+    free(recv_buff);
+    free(send_buff);
     return EXIT_SUCCESS;
 
     handle_error:
         close(sockfd);
-        free(buff_from);
-        free(buff_to);
+        free(recv_buff);
+        free(send_buff);
         return EXIT_FAILURE;
 }
 

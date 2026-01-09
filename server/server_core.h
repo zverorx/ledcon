@@ -38,18 +38,4 @@
  */
 int start_server(int port);
 
-/**
- * @brief SIGTERM and SIGINT signal handler for exiting 
- *        an infinite loop while waiting for a datagram.
- * @param signum Signal number (SIGTERM or SIGINT).
- */
-static void signal_handle(int signum);
-
-/**
- * @brief Turns on or off the desired LED.
- * @param dg Datagram from the client.
- * @return 0 on success, -1 otherwise.
- */
-static int led_switch(struct datagram *dg);
-
 #endif /* SERVER_CORE_H_SENTRY */
