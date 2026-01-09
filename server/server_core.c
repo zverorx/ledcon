@@ -127,8 +127,7 @@ static void signal_handle(int signum) { run = 0; }
 
 static int led_switch(struct datagram *dg)
 {
-    /* TODO: getenv() for GREEN_DEV/RED_DEV */
-    char *path_to_dev = NULL;
+    const char *path_to_dev = NULL;
     char buff[1];
     int fd = -1, res_write;
 
@@ -136,10 +135,16 @@ static int led_switch(struct datagram *dg)
 
     switch (dg->color) {
         case green:
-            path_to_dev = "/sys/class/leds/green:status/brightness";
+            path_to_dev = getenv("GREEN_DEV");
+            if (!path_to_dev) { 
+                path_to_dev = "/sys/class/leds/green:status/brightness";
+            } 
             break;
         case red:
-            path_to_dev = "/sys/class/leds/red:power/brightness";
+            path_to_dev = getenv("RED_DEV");
+            if (!path_to_dev) { 
+                path_to_dev = "/sys/class/leds/red:power/brightness";
+            }
             break;
         default: goto handle_error;
     }
